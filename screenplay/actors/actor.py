@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any
-
+#from screenplay.interactions import BrowseTheWeb
 from screenplay.actors.browse_the_web import BrowseTheWeb
 
 
@@ -12,13 +12,12 @@ class Actor:
 
     @property
     def ability(self) -> BrowseTheWeb:
-        """Return the BrowseTheWeb ability."""
         return self._browse_the_web
 
     def attempts_to(self, *tasks) -> None:
         """Execute one or more Tasks sequentially."""
         for task in tasks:
-            task.perform_as(self)
+            task.perform_as(self) # Ejecución directa lineal
 
     def asks_about(self, question) -> Any:
         """Evaluate a Question and return the result."""

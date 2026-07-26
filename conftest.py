@@ -1,51 +1,27 @@
 """
-Shared test configuration and fixtures for ParaBank Playwright test automation.
-
-Provides browser lifecycle management, Actor fixture with BrowseTheWeb ability,
-and Allure screenshot attachment on test failure.
+Shared test configuration and fixtures for SauceDemo Playwright test automation.
+Provides browser lifecycle management, Actor fixture, and Allure evidence generation.
 """
 
 import os
 import logging
-
 import pytest
 import allure
-import urllib.request
-from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext
+
+from playwright.sync_api import sync_playwright, Page
 
 from screenplay.actors.actor import Actor
+#from screenplay.interactions import BrowseTheWeb
 from screenplay.actors.browse_the_web import BrowseTheWeb
-
 
 logger = logging.getLogger(__name__)
 
-# Default timeout configuration
-NAVIGATION_TIMEOUT_MS = 30_000  # 30 seconds
-ELEMENT_VISIBILITY_TIMEOUT_MS = 10_000  # 10 seconds
-
-# ParaBank configuration
-PARABANK_BASE_URL = "https://parabank.parasoft.com/parabank"
-
-
-def pytest_configure(config):
-    """Initialize ParaBank database at session start to ensure default users exist."""
-    try:
-        req = urllib.request.Request(
-            f"{PARABANK_BASE_URL}/services/bank/initializeDB",
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=10)
-        logger.info("ParaBank database initialized successfully.")
-    except Exception as e:
-        logger.warning("Could not initialize ParaBank database: %s", e)
-
+# Configuración de URLs y Tiempos para SauceDemo
+SAUCEDEMO_BASE_URL = "https://saucedemo.com"
+DEFAULT_TIMEOUT_MS = 5000  # 5 segundos de espera explícita máxima por elemento
 
 def pytest_addoption(parser):
-    """Add custom CLI options for browser configuration.
-
-    Note: If pytest-playwright is installed, it already registers --headed.
-    We guard against duplicate registration.
-    """
+    """Add custom CLI options for browser configuration without duplicates."""
     known_options = set()
     for group in parser._groups:
         for opt in group.options:
@@ -62,117 +38,72 @@ def pytest_addoption(parser):
     parser.addoption(
         "--screenshot-mode",
         action="store",
-        default="always",
+        default="on-failure",  # Recomendado en CI/CD para optimizar almacenamiento
         choices=["always", "on-failure"],
-        help="When to capture screenshots: 'always' (default) or 'on-failure'.",
+        help="When to capture screenshots: 'always' or 'on-failure'.",
     )
 
 
-@pytest.fixture(scope="session")
-def browser(request):
-    """
-    Session-scoped fixture that launches a Chromium browser instance.
-
-    Headless by default. Override with:
-      - --headed CLI flag
-      - HEADED=1 environment variable
-    """
-    headed_cli = request.config.getoption("--headed", default=False)
-    headed_env = os.environ.get("HEADED", "").strip() in ("1", "true", "True", "yes")
-    headless = not (headed_cli or headed_env)
-
-    playwright = sync_playwright().start()
-    browser_instance = playwright.chromium.launch(headless=headless)
-
-    yield browser_instance
-
-    # Session teardown: close browser and stop Playwright engine
-    browser_instance.close()
-    playwright.stop()
+@pytest.fixture(scope="function")
+def page(request) -> Page:
+    """Fixture que gestiona el ciclo de vida del navegador de forma sincrónica."""
+    headed = request.config.getoption("--headed")
+    
+    with sync_playwright() as p:
+        # Iniciamos el navegador según el parámetro CLI
+        browser = p.chromium.launch(headless=not headed)
+        context = browser.new_context()
+        page = context.new_page()
+        
+        # Seteamos el tiempo de espera por defecto solicitado por el profesor
+        page.set_default_timeout(DEFAULT_TIMEOUT_MS)
+        
+        yield page
+        
+        # Cierre seguro de instancias
+        page.close()
+        context.close()
+        browser.close()
 
 
 @pytest.fixture(scope="function")
-def page(browser: Browser):
-    """
-    Function-scoped fixture that creates a new browser context and page per test.
-
-    Each test gets an isolated context (no shared cookies, storage, or session data).
-    Configures default timeouts for navigation and element visibility.
-    """
-    context: BrowserContext = browser.new_context()
-    context.set_default_navigation_timeout(NAVIGATION_TIMEOUT_MS)
-    context.set_default_timeout(ELEMENT_VISIBILITY_TIMEOUT_MS)
-
-    page_instance: Page = context.new_page()
-
-    yield page_instance
-
-    # Teardown: close context after each test function
-    page_instance.close()
-    context.close()
-
-
-@pytest.fixture
 def actor(page: Page) -> Actor:
-    """Provide an Actor with BrowseTheWeb ability for the current test."""
-    return Actor(BrowseTheWeb(page))
-
-
-# --- Screenshot Evidence ---
+    """Fixture que provee el Actor inicializado con la habilidad de navegar."""
+    ability = BrowseTheWeb(page, base_url=SAUCEDEMO_BASE_URL)
+    return Actor(ability)
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """
-    Capture screenshots and attach to the Allure report.
-
-    Behavior controlled by --screenshot option:
-      - 'always' (default): captures screenshot at end of every test (pass or fail)
-      - 'on-failure': captures screenshot only when a test fails
-
-    Can also be set via environment variable: SCREENSHOT_MODE=on-failure
-    """
+    """Captura evidencias (Screenshots) automáticamente y las adjunta a Allure."""
     outcome = yield
     report = outcome.get_result()
-
-    if report.when != "call":
-        return
-
-    # Determine screenshot mode
-    screenshot_mode = os.environ.get("SCREENSHOT_MODE", "").strip()
-    if not screenshot_mode:
-        screenshot_mode = item.config.getoption("--screenshot-mode", default="always")
-
-    # Decide whether to capture
-    should_capture = False
-    if screenshot_mode == "always":
-        should_capture = True
-    elif screenshot_mode == "on-failure" and report.failed:
-        should_capture = True
-
-    if not should_capture:
-        return
-
-    # Attempt to get the page fixture from the test item
-    page_instance = item.funcargs.get("page")
-    if page_instance is None:
-        return
-
-    # Determine attachment name based on result
-    status = "FAILED" if report.failed else "PASSED"
-    attachment_name = f"screenshot_{item.name}_{status}"
-
-    try:
-        screenshot = page_instance.screenshot()
-        allure.attach(
-            screenshot,
-            name=attachment_name,
-            attachment_type=allure.attachment_type.PNG,
-        )
-    except Exception as screenshot_error:
-        # Log screenshot failure gracefully; do not mask the original error
-        logger.warning(
-            "Failed to capture screenshot for '%s': %s",
-            item.nodeid,
-            screenshot_error,
-        )
+    
+    # Obtenemos la configuración de captura seleccionada por CLI
+    screenshot_mode = item.config.getoption("--screenshot-mode")
+    
+    # Validamos las condiciones de captura (Si falló, o si la regla es 'siempre')
+    should_screenshot = (
+        (report.when == "call" and report.failed) or 
+        (report.when == "call" and screenshot_mode == "always")
+    )
+    
+    if should_screenshot:
+        # Extraemos de forma segura la instancia de la fixture 'page' utilizada en el test
+        page = item.funcargs.get("page")
+        if page:
+            # 1. Evidencia en archivo local para Jenkins Artifacts
+            evidences_dir = "reports/screenshots"
+            os.makedirs(evidences_dir, exist_ok=True)
+            screenshot_path = f"{evidences_dir}/{item.name}.png"
+            page.screenshot(path=screenshot_path, full_page=True)
+            
+            # 2. Evidencia incrustada en Reporte Allure automáticamente
+            try:
+                allure.attach(
+                    page.screenshot(full_page=True),
+                    name=f"Evidence_{item.name}",
+                    attachment_type=allure.attachment_type.PNG
+                )
+            except Exception as e:
+                logger.warning("Could not attach screenshot to Allure: %s", e)

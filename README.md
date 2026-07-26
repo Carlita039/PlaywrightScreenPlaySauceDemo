@@ -1,17 +1,16 @@
-# 🎭 PlaywrightScreenPlayLab
+# 🎭 PlaywrightScreenPlaySauceDemo
 
-Proyecto de automatización de pruebas E2E para **ParaBank** utilizando **Playwright + Python + Gradle + Screenplay Pattern + Allure Reports**, con escenarios BDD escritos en **Gherkin en español**.
+Proyecto de automatización de pruebas E2E para **Saucedemo** utilizando **Playwright + Python + Gradle + Screenplay Pattern + Allure Reports**, con escenarios BDD escritos en **Gherkin en español**.
 
 ---
 
 ## 📋 Descripción
 
-Framework de pruebas automatizadas que implementa el **Screenplay Pattern** — un enfoque centrado en el Actor que mejora la legibilidad, reutilización y mantenibilidad del código de pruebas. Los escenarios están definidos en español usando Gherkin (BDD) y se ejecutan contra la aplicación web [ParaBank](https://parabank.parasoft.com/).
+Framework de pruebas automatizadas que implementa el **Screenplay Pattern** — un enfoque centrado en el Actor que mejora la legibilidad, reutilización y mantenibilidad del código de pruebas. Los escenarios están definidos en español usando Gherkin (BDD) y se ejecutan contra la aplicación web [SauceDemo](https://www.saucedemo.com/).
 
-Los **3 escenarios de prueba pasan** contra el sitio live de ParaBank:
-- Registro de usuario y apertura de cuenta
-- Transferencia de fondos entre cuentas
-- Consulta de historial de transacciones
+Los **2 escenarios de prueba pasan** contra el sitio de SauceDemo:
+- Inicio de sesión exitoso y validación de ordenamiento por precio menor a mayor
+- Validación de consistencia de precios en el catálogo
 
 ---
 
@@ -150,25 +149,19 @@ allure --version
 ## 📁 Estructura del Proyecto
 
 ```
-PlaywrightScreenPlayLab/
+PlaywrightScreenPlaySauceDemo/
 ├── build.gradle                 # Orquestación Gradle (venv, deps, tests)
 ├── pytest.ini                   # Configuración pytest + Allure
 ├── requirements.txt             # Dependencias Python
 ├── conftest.py                  # Fixtures (browser, page, actor, screenshot on failure)
 ├── features/                    # Escenarios BDD en Gherkin (español)
-│   ├── registro_usuario.feature
-│   ├── transferencia_fondos.feature
-│   └── historial_cuenta.feature
+│   ├── swag_labs.feature
 ├── screenplay/                  # Patrón Screenplay
 │   ├── actors/
 │   │   ├── actor.py             # Clase Actor (attempts_to, asks_about)
 │   │   └── browse_the_web.py    # Habilidad: navegar con Playwright
 │   ├── tasks/                   # Tareas de alto nivel
 │   │   ├── login.py
-│   │   ├── register_user.py
-│   │   ├── open_new_account.py
-│   │   ├── transfer_funds.py
-│   │   └── view_account_history.py
 │   ├── interactions/            # Interacciones atómicas con la UI
 │   │   ├── navigate_to.py
 │   │   ├── fill_field.py
@@ -176,21 +169,15 @@ PlaywrightScreenPlayLab/
 │   │   ├── select_option.py
 │   │   └── wait_for_selector.py
 │   └── questions/               # Verificaciones del estado del sistema
+│       ├── inventory_question.py
 │       ├── is_logged_in.py
-│       ├── is_registration_successful.py
-│       ├── is_transfer_successful.py
-│       ├── is_transaction_history_visible.py
-│       └── get_transactions.py
 ├── steps/                       # Step definitions (pytest-bdd)
 │   ├── login_steps.py
-│   ├── registro_steps.py
-│   ├── transferencia_steps.py
-│   ├── historial_steps.py
+│   ├── test_swag_labs.py
 │   └── test_data_helper.py      # Generador de datos aleatorios
 └── tests/                       # Test runners (wiring scenarios ↔ steps)
     ├── test_registro_usuario.py
-    ├── test_transferencia_fondos.py
-    └── test_historial_cuenta.py
+    ├── sort_product.py
 ```
 
 ---
