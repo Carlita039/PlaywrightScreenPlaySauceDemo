@@ -11,11 +11,15 @@ pipeline {
                 script {
                     echo '--- Preparando directorio y clonando Serenity BDD ---'
                     
-                    // Limpieza segura en Windows
+                    // Limpieza en Windows
                     bat "if exist proyecto-serenity rmdir /s /q proyecto-serenity"
                     
-                    // Forzamos la URL usando comillas dobles explícitas dentro del comando bat
-                    bat 'git clone -b main "https://github.com" proyecto-serenity'
+                    // Reconstrucción de URL usando variables nativas de CMD para evitar recortes
+                    bat """
+                        set DOMAIN=https://github.com
+                        set REPO=/Carlita039/proyectoSerenityBDD.git
+                        git clone -b main %DOMAIN%%REPO% proyecto-serenity
+                    """
                     
                     dir('proyecto-serenity') {
                         echo '--- Ejecutando Pruebas de Serenity BDD ---'
@@ -45,7 +49,13 @@ pipeline {
                     echo '--- Preparando directorio y clonando Playwright ---'
                     
                     bat "if exist proyecto-playwright rmdir /s /q proyecto-playwright"
-                    bat 'git clone -b main "https://github.com" proyecto-playwright'
+                    
+                    // Reconstrucción de la segunda URL
+                    bat """
+                        set DOMAIN=https://github.com
+                        set REPO=/Carlita039/PlaywrightScreenPlaySauceDemo.git
+                        git clone -b main %DOMAIN%%REPO% proyecto-playwright
+                    """
                     
                     dir('proyecto-playwright') {
                         echo '--- Ejecutando Pruebas de Playwright ---'
