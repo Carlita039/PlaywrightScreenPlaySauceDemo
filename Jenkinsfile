@@ -2,13 +2,8 @@ pipeline {
     agent any
 
     tools {
-        // Este nombre debe coincidir EXACTAMENTE con el que configures en Jenkins
+        // Verifica que este nombre coincida con tu configuración global de Jenkins
         jdk 'JDK21'
-    }
-
-    environment {
-        REPO_SERENITY   = 'https://github.com'
-        REPO_PLAYWRIGHT  = 'https://github.com'
     }
 
     stages {
@@ -16,24 +11,20 @@ pipeline {
             steps {
                 script {
                     echo '--- Descargando Proyecto Serenity BDD ---'
+                    // Usamos un bloque limpio para clonar la URL del repositorio directamente
                     dir('proyecto-serenity') {
-                        git url: "${env.REPO_SERENITY}", branch: 'main'
+                        git branch: 'main', url: 'https://github.com'
                         
                         echo '--- Ejecutando Pruebas de Serenity BDD ---'
-                        // En Windows se usa bat, en Linux/Mac se usa sh
-                        if (isUnix()) {
-                            sh 'chmod +x gradlew'
-                            sh './gradlew clean test aggregate'
-                        } else {
-                            bat 'gradlew.bat clean test aggregate'
-                        }
+                        // Al estar en Windows (según tus logs), usamos bat obligatoriamente
+                        bat 'gradlew.bat clean test aggregate'
                     }
                 }
             }
             post {
                 always {
                     dir('proyecto-serenity') {
-                        // Publica el reporte nativo de Serenity HTML
+                        // Publica el reporte nativo de Serenity HTML si es que se generó
                         publishHTML([
                             allowMissing: true,
                             alwaysLinkToLastBuild: true,
@@ -52,15 +43,10 @@ pipeline {
                 script {
                     echo '--- Descargando Proyecto Playwright Python ---'
                     dir('proyecto-playwright') {
-                        git url: "${env.REPO_PLAYWRIGHT}", branch: 'main'
+                        git branch: 'main', url: 'https://github.com'
                         
                         echo '--- Ejecutando Pruebas de Playwright ---'
-                        if (isUnix()) {
-                            sh 'chmod +x gradlew'
-                            sh './gradlew test'
-                        } else {
-                            bat 'gradlew.bat test'
-                        }
+                        bat 'gradlew.bat test'
                     }
                 }
             }
