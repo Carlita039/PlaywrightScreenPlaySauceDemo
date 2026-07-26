@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     tools {
-        // Verifica que este nombre coincida con tu configuración global de Jenkins
         jdk 'JDK21'
     }
 
@@ -10,13 +9,16 @@ pipeline {
         stage('Stage 1: Ejecución Serenity') {
             steps {
                 script {
-                    echo '--- Descargando Proyecto Serenity BDD ---'
-                    // Usamos un bloque limpio para clonar la URL del repositorio directamente
+                    echo '--- Preparando directorio y clonando Serenity BDD ---'
+                    
+                    // Borra la carpeta con error si es que existe en Windows
+                    bat 'if exist proyecto-serenity rmdir /s /q proyecto-serenity'
+                    
+                    // Clonamos de forma directa usando la consola nativa de Windows
+                    bat 'git clone -b main https://github.com proyecto-serenity'
+                    
                     dir('proyecto-serenity') {
-                        git branch: 'main', url: 'https://github.com'
-                        
                         echo '--- Ejecutando Pruebas de Serenity BDD ---'
-                        // Al estar en Windows (según tus logs), usamos bat obligatoriamente
                         bat 'gradlew.bat clean test aggregate'
                     }
                 }
@@ -24,7 +26,6 @@ pipeline {
             post {
                 always {
                     dir('proyecto-serenity') {
-                        // Publica el reporte nativo de Serenity HTML si es que se generó
                         publishHTML([
                             allowMissing: true,
                             alwaysLinkToLastBuild: true,
@@ -41,10 +42,12 @@ pipeline {
         stage('Stage 2: Ejecución Playwright') {
             steps {
                 script {
-                    echo '--- Descargando Proyecto Playwright Python ---'
+                    echo '--- Preparando directorio y clonando Playwright ---'
+                    
+                    bat 'if exist proyecto-playwright rmdir /s /q proyecto-playwright'
+                    bat 'git clone -b main https://github.com proyecto-playwright'
+                    
                     dir('proyecto-playwright') {
-                        git branch: 'main', url: 'https://github.com'
-                        
                         echo '--- Ejecutando Pruebas de Playwright ---'
                         bat 'gradlew.bat test'
                     }
@@ -53,7 +56,6 @@ pipeline {
             post {
                 always {
                     dir('proyecto-playwright') {
-                        // Publica los resultados para Allure
                         allure includeProperties: false, results: [[path: 'allure-results']]
                     }
                 }
