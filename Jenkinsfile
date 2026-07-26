@@ -11,10 +11,8 @@ pipeline {
                 script {
                     echo '--- Preparando directorio y clonando Serenity BDD ---'
                     
-                    // Limpieza en Windows
                     bat "if exist proyecto-serenity rmdir /s /q proyecto-serenity"
                     
-                    // Reconstrucción de URL usando variables nativas de CMD para evitar recortes
                     bat """
                         set DOMAIN=https://github.com
                         set REPO=/Carlita039/proyectoSerenityBDD.git
@@ -22,6 +20,10 @@ pipeline {
                     """
                     
                     dir('proyecto-serenity') {
+                        echo '--- Restaurando Gradle Wrapper ---'
+                        // Si tienes Gradle instalado en tu laptop, este comando generará el .jar faltante
+                        bat "gradle wrapper"
+                        
                         echo '--- Ejecutando Pruebas de Serenity BDD ---'
                         bat "gradlew.bat clean test aggregate"
                     }
@@ -50,7 +52,6 @@ pipeline {
                     
                     bat "if exist proyecto-playwright rmdir /s /q proyecto-playwright"
                     
-                    // Reconstrucción de la segunda URL
                     bat """
                         set DOMAIN=https://github.com
                         set REPO=/Carlita039/PlaywrightScreenPlaySauceDemo.git
@@ -58,6 +59,9 @@ pipeline {
                     """
                     
                     dir('proyecto-playwright') {
+                        echo '--- Restaurando Gradle Wrapper ---'
+                        bat "gradle wrapper"
+                        
                         echo '--- Ejecutando Pruebas de Playwright ---'
                         bat "gradlew.bat test"
                     }
