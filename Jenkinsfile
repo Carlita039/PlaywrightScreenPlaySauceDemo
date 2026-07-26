@@ -11,15 +11,15 @@ pipeline {
                 script {
                     echo '--- Preparando directorio y clonando Serenity BDD ---'
                     
-                    // Borra la carpeta con error si es que existe en Windows
-                    bat 'if exist proyecto-serenity rmdir /s /q proyecto-serenity'
+                    // Limpieza segura en Windows
+                    bat "if exist proyecto-serenity rmdir /s /q proyecto-serenity"
                     
-                    // Clonamos de forma directa usando la consola nativa de Windows
-                    bat 'git clone -b main https://github.com proyecto-serenity'
+                    // Forzamos la URL usando comillas dobles explícitas dentro del comando bat
+                    bat 'git clone -b main "https://github.com" proyecto-serenity'
                     
                     dir('proyecto-serenity') {
                         echo '--- Ejecutando Pruebas de Serenity BDD ---'
-                        bat 'gradlew.bat clean test aggregate'
+                        bat "gradlew.bat clean test aggregate"
                     }
                 }
             }
@@ -44,12 +44,12 @@ pipeline {
                 script {
                     echo '--- Preparando directorio y clonando Playwright ---'
                     
-                    bat 'if exist proyecto-playwright rmdir /s /q proyecto-playwright'
-                    bat 'git clone -b main https://github.com proyecto-playwright'
+                    bat "if exist proyecto-playwright rmdir /s /q proyecto-playwright"
+                    bat 'git clone -b main "https://github.com" proyecto-playwright'
                     
                     dir('proyecto-playwright') {
                         echo '--- Ejecutando Pruebas de Playwright ---'
-                        bat 'gradlew.bat test'
+                        bat "gradlew.bat test"
                     }
                 }
             }
